@@ -106,9 +106,12 @@ func (m model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 
 			m.list.SetItems(getItemsFromRSS(rss))
 
-    m.timer.Timeout = time.Minute * 10
-    m.list.NewStatusMessage("Fetched at " + time.Now().Format("15:04"))
-    return m, nil
+      m.list.NewStatusMessage("Fetched at " + time.Now().Format("15:04"))
+      m.timer.Timeout = time.Minute * 15
+
+      var cmd tea.Cmd
+      m.timer, cmd = m.timer.Update(msg)
+      return m, cmd
 
   }
 
@@ -262,7 +265,7 @@ func Render(items []list.Item, cmds Commands) error {
     list: l, 
     commands: cmds, 
     viewport: vp,
-    timer: timer.NewWithInterval(time.Minute * 10, time.Minute),
+    timer: timer.NewWithInterval(time.Minute * 15, time.Minute * 10),
   }
 
 	if _, err := tea.NewProgram(m, tea.WithAltScreen()).Run(); err != nil {
