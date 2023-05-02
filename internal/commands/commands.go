@@ -5,6 +5,7 @@ import (
 	"log"
 	"os"
 	"os/exec"
+  	"runtime"
 	"regexp"
 	"strings"
 	"sync"
@@ -154,6 +155,31 @@ func fetchFeed(ch chan FetchResultError, wg *sync.WaitGroup, feed config.Feed) {
 	}
 
 	ch <- FetchResultError{res: r, err: nil, url: feed.URL}
+}
+
+func (c Commands) OpenArticle(substr string) error {
+  item, err := c.FindArticle(substr)
+
+  url := item.Link
+
+  // Open browser with Link
+  switch runtime.GOOS {
+	case "darwin":
+		err = exec.Command("open", url).Start()
+	case "linux":
+		err = exec.Command("xdg-open", url).Start()
+	case "windows":
+		err = exec.Command("cmd", "/c", "start", url).Start()
+	default:
+		err = fmt.Errorf("unsupported platform")
+	}
+
+  if err != nil {
+    return fmt.Errorf("commands.OpenArticle: %w", err)
+	} else {
+    return nil
+  }
+
 }
 
 func (c Commands) FindArticle(substr string) (item rss.Item, err error) {

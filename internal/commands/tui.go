@@ -4,7 +4,9 @@ import (
 	"fmt"
 	"io"
 	"os"
+  "time"
 
+  "github.com/charmbracelet/bubbles/timer"
 	"github.com/charmbracelet/bubbles/key"
 	"github.com/charmbracelet/bubbles/list"
 	"github.com/charmbracelet/bubbles/viewport"
@@ -72,10 +74,22 @@ type model struct {
 	selectedArticle string
 	viewport        viewport.Model
 	prevKeyWasG     bool
+
+  timer timer.Model
 }
 
+
 func (m model) Init() tea.Cmd {
-	return nil
+  return m.timer.Init()
+}
+
+func resetTimer(m model, msg tea.Msg) (tea.Model, tea.Cmd) {
+    m.list.NewStatusMessage("Fetched at " + time.Now().Format("15:04"))
+    m.timer.Timeout = time.Minute * 15
+
+    var cmd tea.Cmd
+    m.timer, cmd = m.timer.Update(msg)
+    return m, cmd
 }
 
 func (m model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
@@ -92,7 +106,17 @@ func (m model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 		m.viewport.Height = msg.Height - footerHeight
 
 		return m, nil
-	}
+
+  case timer.TickMsg:
+			rss, err := m.commands.fetchAllFeeds(true)
+			if err != nil {
+				return m, tea.Quit
+			}
+
+			m.list.SetItems(getItemsFromRSS(rss))
+
+      return resetTimer(m, msg)
+  }
 
 	if m.selectedArticle != "" {
 		return updateViewport(msg, m)
@@ -100,6 +124,25 @@ func (m model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 
 	return updateList(msg, m)
 }
+
+func openArticleInBrowser(m model, i Item) error {
+  return m.commands.OpenArticle(i.Title)
+}
+
+func openArticleInTerminal(m model, i Item) error {
+  m.selectedArticle = i.Title
+
+  m.viewport.GotoTop()
+
+  content, err := m.commands.FindGlamourisedArticle(m.selectedArticle)
+  if err != nil {
+    return err
+  }
+
+  m.viewport.SetContent(content)
+  return nil
+}
+
 
 func updateList(msg tea.Msg, m model) (tea.Model, tea.Cmd) {
 	switch msg := msg.(type) {
@@ -116,22 +159,15 @@ func updateList(msg tea.Msg, m model) (tea.Model, tea.Cmd) {
 			}
 
 			m.list.SetItems(getItemsFromRSS(rss))
-
-			return m, nil
+      return resetTimer(m, msg)
 
 		case "enter":
 			i, ok := m.list.SelectedItem().(Item)
 			if ok {
-				m.selectedArticle = i.Title
-
-				m.viewport.GotoTop()
-
-				content, err := m.commands.FindGlamourisedArticle(m.selectedArticle)
-				if err != nil {
-					return m, tea.Quit
-				}
-
-				m.viewport.SetContent(content)
+        err := openArticleInBrowser(m, i)
+        if err != nil {
+          return m, tea.Quit
+        }
 			}
 
 			return m, nil
@@ -216,6 +252,7 @@ func Render(items []list.Item, cmds Commands) error {
 	l.Styles.Title = titleStyle
 	l.Styles.PaginationStyle = paginationStyle
 	l.Styles.HelpStyle = helpStyle
+  l.NewStatusMessage("Fetched at " + time.Now().Format("15:04"))
 	l.AdditionalShortHelpKeys = func() []key.Binding {
 		return []key.Binding{
 			key.NewBinding(
@@ -227,7 +264,12 @@ func Render(items []list.Item, cmds Commands) error {
 
 	vp := viewport.New(78, height)
 
-	m := model{list: l, commands: cmds, viewport: vp}
+	m := model{
+    list: l, 
+    commands: cmds, 
+    viewport: vp,
+    timer: timer.NewWithInterval(time.Minute * 15, time.Minute * 10),
+  }
 
 	if _, err := tea.NewProgram(m, tea.WithAltScreen()).Run(); err != nil {
 		return fmt.Errorf("tui.Render: %w", err)
