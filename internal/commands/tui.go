@@ -4,7 +4,9 @@ import (
 	"fmt"
 	"io"
 	"os"
+  "time"
 
+  "github.com/charmbracelet/bubbles/timer"
 	"github.com/charmbracelet/bubbles/key"
 	"github.com/charmbracelet/bubbles/list"
 	"github.com/charmbracelet/bubbles/viewport"
@@ -72,10 +74,13 @@ type model struct {
 	selectedArticle string
 	viewport        viewport.Model
 	prevKeyWasG     bool
+
+  timer timer.Model
 }
 
+
 func (m model) Init() tea.Cmd {
-	return nil
+  return m.timer.Init()
 }
 
 func (m model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
@@ -92,7 +97,20 @@ func (m model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 		m.viewport.Height = msg.Height - footerHeight
 
 		return m, nil
-	}
+
+  case timer.TickMsg:
+			rss, err := m.commands.fetchAllFeeds(true)
+			if err != nil {
+				return m, tea.Quit
+			}
+
+			m.list.SetItems(getItemsFromRSS(rss))
+
+    m.timer.Timeout = time.Minute * 10
+    m.list.NewStatusMessage("Fetched at " + time.Now().Format("15:04"))
+    return m, nil
+
+  }
 
 	if m.selectedArticle != "" {
 		return updateViewport(msg, m)
@@ -228,6 +246,7 @@ func Render(items []list.Item, cmds Commands) error {
 	l.Styles.Title = titleStyle
 	l.Styles.PaginationStyle = paginationStyle
 	l.Styles.HelpStyle = helpStyle
+  l.NewStatusMessage("Fetched at " + time.Now().Format("15:04"))
 	l.AdditionalShortHelpKeys = func() []key.Binding {
 		return []key.Binding{
 			key.NewBinding(
@@ -239,7 +258,12 @@ func Render(items []list.Item, cmds Commands) error {
 
 	vp := viewport.New(78, height)
 
-	m := model{list: l, commands: cmds, viewport: vp}
+	m := model{
+    list: l, 
+    commands: cmds, 
+    viewport: vp,
+    timer: timer.NewWithInterval(time.Minute * 10, time.Minute),
+  }
 
 	if _, err := tea.NewProgram(m, tea.WithAltScreen()).Run(); err != nil {
 		return fmt.Errorf("tui.Render: %w", err)
