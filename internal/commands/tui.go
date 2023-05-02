@@ -101,6 +101,24 @@ func (m model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 	return updateList(msg, m)
 }
 
+func openArticleInBrowser(m model, i Item) error {
+  return m.commands.OpenArticle(i.Title)
+}
+
+func openArticleInTerminal(m model, i Item) error {
+  m.selectedArticle = i.Title
+
+  m.viewport.GotoTop()
+
+  content, err := m.commands.FindGlamourisedArticle(m.selectedArticle)
+  if err != nil {
+    return err
+  }
+
+  m.viewport.SetContent(content)
+  return nil
+}
+
 func updateList(msg tea.Msg, m model) (tea.Model, tea.Cmd) {
 	switch msg := msg.(type) {
 	case tea.KeyMsg:
@@ -122,16 +140,10 @@ func updateList(msg tea.Msg, m model) (tea.Model, tea.Cmd) {
 		case "enter":
 			i, ok := m.list.SelectedItem().(Item)
 			if ok {
-				m.selectedArticle = i.Title
-
-				m.viewport.GotoTop()
-
-				content, err := m.commands.FindGlamourisedArticle(m.selectedArticle)
-				if err != nil {
-					return m, tea.Quit
-				}
-
-				m.viewport.SetContent(content)
+        err := openArticleInBrowser(m, i)
+        if err != nil {
+          return m, tea.Quit
+        }
 			}
 
 			return m, nil
