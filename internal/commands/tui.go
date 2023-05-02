@@ -83,6 +83,15 @@ func (m model) Init() tea.Cmd {
   return m.timer.Init()
 }
 
+func resetTimer(m model, msg tea.Msg) (tea.Model, tea.Cmd) {
+    m.list.NewStatusMessage("Fetched at " + time.Now().Format("15:04"))
+    m.timer.Timeout = time.Minute * 15
+
+    var cmd tea.Cmd
+    m.timer, cmd = m.timer.Update(msg)
+    return m, cmd
+}
+
 func (m model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 	// resize all views regardless of which is showing to keep consistent
 	// when switching
@@ -106,13 +115,7 @@ func (m model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 
 			m.list.SetItems(getItemsFromRSS(rss))
 
-      m.list.NewStatusMessage("Fetched at " + time.Now().Format("15:04"))
-      m.timer.Timeout = time.Minute * 15
-
-      var cmd tea.Cmd
-      m.timer, cmd = m.timer.Update(msg)
-      return m, cmd
-
+      return resetTimer(m, msg)
   }
 
 	if m.selectedArticle != "" {
@@ -140,6 +143,7 @@ func openArticleInTerminal(m model, i Item) error {
   return nil
 }
 
+
 func updateList(msg tea.Msg, m model) (tea.Model, tea.Cmd) {
 	switch msg := msg.(type) {
 	case tea.KeyMsg:
@@ -155,8 +159,7 @@ func updateList(msg tea.Msg, m model) (tea.Model, tea.Cmd) {
 			}
 
 			m.list.SetItems(getItemsFromRSS(rss))
-
-			return m, nil
+      return resetTimer(m, msg)
 
 		case "enter":
 			i, ok := m.list.SelectedItem().(Item)
