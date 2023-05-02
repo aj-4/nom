@@ -129,21 +129,6 @@ func openArticleInBrowser(m model, i Item) error {
   return m.commands.OpenArticle(i.Title)
 }
 
-func openArticleInTerminal(m model, i Item) error {
-  m.selectedArticle = i.Title
-
-  m.viewport.GotoTop()
-
-  content, err := m.commands.FindGlamourisedArticle(m.selectedArticle)
-  if err != nil {
-    return err
-  }
-
-  m.viewport.SetContent(content)
-  return nil
-}
-
-
 func updateList(msg tea.Msg, m model) (tea.Model, tea.Cmd) {
 	switch msg := msg.(type) {
 	case tea.KeyMsg:
@@ -161,17 +146,23 @@ func updateList(msg tea.Msg, m model) (tea.Model, tea.Cmd) {
 			m.list.SetItems(getItemsFromRSS(rss))
       return resetTimer(m, msg)
 
-		case "enter":
+    case "enter":
 			i, ok := m.list.SelectedItem().(Item)
 			if ok {
-        err := openArticleInBrowser(m, i)
-        if err != nil {
-          return m, tea.Quit
-        }
+				m.selectedArticle = i.Title
+
+				m.viewport.GotoTop()
+
+				content, err := m.commands.FindGlamourisedArticle(m.selectedArticle)
+				if err != nil {
+					return m, tea.Quit
+				}
+
+				m.viewport.SetContent(content)
 			}
 
 			return m, nil
-		}
+    }
 	}
 
 	var cmd tea.Cmd
@@ -192,6 +183,15 @@ func updateViewport(msg tea.Msg, m model) (tea.Model, tea.Cmd) {
 			}
 		case "G":
 			m.viewport.GotoBottom()
+    case "enter":
+      i, ok := m.list.SelectedItem().(Item)
+      if ok {
+        err := openArticleInBrowser(m, i)
+        if err != nil {
+          return m, tea.Quit
+        }
+      }
+      return m, nil
 		case "esc", "q":
 			m.selectedArticle = ""
 

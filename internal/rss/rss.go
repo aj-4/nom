@@ -4,6 +4,7 @@ import (
 	"fmt"
 	"log"
 	"time"
+  "regexp"
 
 	md "github.com/JohannesKaufmann/html-to-markdown"
 	"github.com/charmbracelet/glamour"
@@ -34,6 +35,11 @@ type RSS struct {
 	Channel Channel `xml:"channel"`
 }
 
+func removeInlineLinks(md string) string {
+    re := regexp.MustCompile(`\[(.*?)\]\((\S+)\)`)
+    return re.ReplaceAllString(md, "$1")
+}
+
 func GlamouriseItem(item Item) (string, error) {
 	var mdown string
 
@@ -43,7 +49,7 @@ func GlamouriseItem(item Item) (string, error) {
 	mdown += "\n"
 	mdown += item.PubDate.String()
 	mdown += "\n\n"
-	mdown += htmlToMd(item.Content)
+	mdown += removeInlineLinks(htmlToMd(item.Description))
 
 	out, err := glamour.Render(mdown, "dark")
 	if err != nil {
@@ -95,8 +101,8 @@ func Fetch(f config.Feed) (RSS, error) {
 
 		if it.Content == "" {
 			// If there's no content (as is the case for YouTube RSS items), fallback
-			// to the link.
-			ni.Content = it.Link
+			// to the DESCRIPTION.
+			ni.Content = it.Description
 		} else {
 			ni.Content = it.Content
 		}
