@@ -13,6 +13,7 @@ import (
 type Feed struct {
 	URL  string `yaml:"url"`
 	Name string `yaml:"name,omitempty"`
+  Color string `yaml:"color,omitempty"`
 }
 
 type MinifluxBackend struct {
@@ -52,9 +53,39 @@ func New(configPath string, pager string, noCache bool, previewFeeds []string) (
 	}
 
 	var f []Feed
-	for _, feedURL := range previewFeeds {
-		f = append(f, Feed{URL: feedURL})
-	}
+  if len(previewFeeds) > 0 {
+    feedName := previewFeeds[0]
+    err := setupConfigDir(configPath)
+    if err != nil {
+      return Config{}, fmt.Errorf("config Load: %w", err)
+    }
+
+    rawData, err := os.ReadFile(configPath)
+    if err != nil {
+      return Config{}, fmt.Errorf("config.Load: %w", err)
+    }
+
+    var fileConfig Config
+    err = yaml.Unmarshal(rawData, &fileConfig)
+    if err != nil {
+      return Config{}, fmt.Errorf("config.Read: %w", err)
+    }
+
+    feeds := fileConfig.Feeds
+    // find feed URL by Name
+
+    var previewFeed Feed
+    for _, feed := range feeds {
+      if feed.Name == feedName {
+        previewFeed.Name = feedName
+        previewFeed.URL = feed.URL
+        previewFeed.Color = feed.Color
+        break
+      }
+    }
+
+		f = append(f, previewFeed)
+  }
 
 	return Config{
 		configPath:   configPath,

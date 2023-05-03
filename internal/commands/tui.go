@@ -21,9 +21,9 @@ const listHeight = 14
 
 var (
 	appStyle          = lipgloss.NewStyle().Padding(0).Margin(0)
-	titleStyle        = list.DefaultStyles().Title.Margin(1, 0, 0, 0)
-	itemStyle         = lipgloss.NewStyle().PaddingLeft(4)
-	selectedItemStyle = lipgloss.NewStyle().PaddingLeft(2).Foreground(lipgloss.Color("170"))
+  titleStyle = list.DefaultStyles().Title.Margin(1, 0, 0, 0).Background(lipgloss.Color("#000"))
+	itemStyle         = lipgloss.NewStyle().PaddingLeft(4).PaddingRight(1)
+	selectedItemStyle = lipgloss.NewStyle().PaddingLeft(2).Foreground(lipgloss.Color("#f1f1f1"))
 	paginationStyle   = list.DefaultStyles().PaginationStyle.PaddingLeft(4)
 	helpStyle         = list.DefaultStyles().
 				HelpStyle.
@@ -52,11 +52,7 @@ func (d itemDelegate) Render(w io.Writer, m list.Model, index int, listItem list
 	}
 
 	var str string
-	if i.FeedName == "" {
-		str = fmt.Sprintf("%d. %s", index+1, i.Title)
-	} else {
-		str = fmt.Sprintf("%d. %s: %s", index+1, i.FeedName, i.Title)
-	}
+	str = fmt.Sprintf("%d. %s", index+1, i.Title)
 
 	fn := itemStyle.Render
 	if index == m.Index() {
@@ -245,10 +241,18 @@ func Render(items []list.Item, cmds Commands) error {
 
 	appStyle.Height(height)
 
+  var title string
+  if cmds.config.IsPreviewMode() {
+    title = cmds.config.PreviewFeeds[0].Name
+    titleStyle = titleStyle.Background(lipgloss.Color(cmds.config.PreviewFeeds[0].Color))
+  } else {
+    title = "nom 🍜"
+  }
+
 	l := list.New(items, itemDelegate{}, defaultWidth, height)
 	l.SetShowStatusBar(false)
 	l.SetFilteringEnabled(false)
-	l.Title = "nom 🍜"
+	l.Title = title
 	l.Styles.Title = titleStyle
 	l.Styles.PaginationStyle = paginationStyle
 	l.Styles.HelpStyle = helpStyle
