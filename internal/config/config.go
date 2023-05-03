@@ -14,6 +14,7 @@ type Feed struct {
 	URL  string `yaml:"url"`
 	Name string `yaml:"name,omitempty"`
   Color string `yaml:"color,omitempty"`
+  Browser bool `yaml:"browser,omitempty"`
 }
 
 type MinifluxBackend struct {
@@ -80,6 +81,7 @@ func New(configPath string, pager string, noCache bool, previewFeeds []string) (
         previewFeed.Name = feedName
         previewFeed.URL = feed.URL
         previewFeed.Color = feed.Color
+        previewFeed.Browser = feed.Browser
         break
       }
     }

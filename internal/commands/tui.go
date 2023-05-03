@@ -72,6 +72,7 @@ type model struct {
 	prevKeyWasG     bool
 
   timer timer.Model
+  OpenBrowser bool
 }
 
 
@@ -145,16 +146,23 @@ func updateList(msg tea.Msg, m model) (tea.Model, tea.Cmd) {
     case "enter":
 			i, ok := m.list.SelectedItem().(Item)
 			if ok {
-				m.selectedArticle = i.Title
+        if m.OpenBrowser {
+          err := openArticleInBrowser(m, i)
+          if err != nil {
+            return m, tea.Quit
+          }
+        } else {
+				  m.selectedArticle = i.Title
+          m.viewport.GotoTop()
 
-				m.viewport.GotoTop()
+          content, err := m.commands.FindGlamourisedArticle(m.selectedArticle)
+          if err != nil {
+            return m, tea.Quit
+          }
 
-				content, err := m.commands.FindGlamourisedArticle(m.selectedArticle)
-				if err != nil {
-					return m, tea.Quit
-				}
+          m.viewport.SetContent(content)
+        }
 
-				m.viewport.SetContent(content)
 			}
 
 			return m, nil
@@ -242,9 +250,11 @@ func Render(items []list.Item, cmds Commands) error {
 	appStyle.Height(height)
 
   var title string
+  var openBrowser bool
   if cmds.config.IsPreviewMode() {
     title = cmds.config.PreviewFeeds[0].Name
     titleStyle = titleStyle.Background(lipgloss.Color(cmds.config.PreviewFeeds[0].Color))
+    openBrowser = cmds.config.PreviewFeeds[0].Browser
   } else {
     title = "nom 🍜"
   }
@@ -273,6 +283,8 @@ func Render(items []list.Item, cmds Commands) error {
     commands: cmds, 
     viewport: vp,
     timer: timer.NewWithInterval(time.Minute * 15, time.Minute * 10),
+
+    OpenBrowser: openBrowser,
   }
 
 	if _, err := tea.NewProgram(m, tea.WithAltScreen()).Run(); err != nil {
