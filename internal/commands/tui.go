@@ -252,7 +252,7 @@ func Render(items []list.Item, cmds Commands) error {
   var title string
   var openBrowser bool
   if cmds.config.IsPreviewMode() {
-    title = cmds.config.PreviewFeeds[0].Name
+    title = cmds.config.PreviewFeeds[0].Name + " 🍜"
     titleStyle = titleStyle.Background(lipgloss.Color(cmds.config.PreviewFeeds[0].Color))
     openBrowser = cmds.config.PreviewFeeds[0].Browser
   } else {
@@ -262,6 +262,7 @@ func Render(items []list.Item, cmds Commands) error {
 	l := list.New(items, itemDelegate{}, defaultWidth, height)
 	l.SetShowStatusBar(false)
 	l.SetFilteringEnabled(false)
+  l.SetShowHelp(false)
 	l.Title = title
 	l.Styles.Title = titleStyle
 	l.Styles.PaginationStyle = paginationStyle
