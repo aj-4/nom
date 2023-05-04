@@ -25,11 +25,6 @@ var (
 	itemStyle         = lipgloss.NewStyle().PaddingLeft(4).PaddingRight(1)
 	selectedItemStyle = lipgloss.NewStyle().PaddingLeft(2).Foreground(lipgloss.Color("#f1f1f1"))
 	paginationStyle   = list.DefaultStyles().PaginationStyle.PaddingLeft(4)
-	helpStyle         = list.DefaultStyles().
-				HelpStyle.
-				PaddingLeft(4).
-				PaddingBottom(1).
-				Foreground(lipgloss.Color("#4A4A4A"))
 )
 
 type Item struct {
@@ -99,8 +94,7 @@ func (m model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 		m.list.SetSize(msg.Width-x, msg.Height-y)
 
 		m.viewport.Width = msg.Width - x
-		footerHeight := lipgloss.Height(m.viewportHelp())
-		m.viewport.Height = msg.Height - footerHeight
+		m.viewport.Height = msg.Height
 
 		return m, nil
 
@@ -226,11 +220,7 @@ func listView(m model) string {
 }
 
 func viewportView(m model) string {
-	return m.viewport.View() + "\n" + m.viewportHelp()
-}
-
-func (m model) viewportHelp() string {
-	return helpStyle.Render("\n↑/k up • ↓/j down • gg top • G bottom • q/esc back")
+	return m.viewport.View()
 }
 
 func RSSToItem(c rss.Item) Item {
@@ -266,7 +256,6 @@ func Render(items []list.Item, cmds Commands) error {
 	l.Title = title
 	l.Styles.Title = titleStyle
 	l.Styles.PaginationStyle = paginationStyle
-	l.Styles.HelpStyle = helpStyle
   l.NewStatusMessage("Fetched at " + time.Now().Format("15:04"))
 	l.AdditionalShortHelpKeys = func() []key.Binding {
 		return []key.Binding{
